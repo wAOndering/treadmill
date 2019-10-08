@@ -3,7 +3,7 @@ function importTMdata = importfile(pathDir, preShockWindow, postShockWindow)
 
 % default for the function
 if nargin<=2
-	pathDir= '/home/rum/Dropbox (Scripps Research)/RumScripts/Scipts for other/Sheldon_TreadmillScript/';
+	% pathDir= '/home/rum/Dropbox (Scripps Research)/RumScripts/Scipts for other/Sheldon_TreadmillScript/';
 	preShockWindow=10; % express in seconds duration before the shock
 	postShockWindow=45; % express in seconds duration before the shock
 end
@@ -37,7 +37,13 @@ for ii=1:length(files)
 	endF=find(endF==1); % obtain the row index for those values
 
 	% the following is structured this way to have the thing starting when motionCat is motion
-	T=T(endF(1)-1:endF(2)-1,:); % subset the table to the row of interest
+	display(endF)
+	if endF(1)<10
+		T=T(endF(2)-1:end,:);
+	else
+		T=T(endF(1)-1:end,:); % subset the table to the row of interest
+	end
+
 	T.distance(1)=0;
 	T.speed(1)=0;
 	T(2,:)=[];
@@ -63,7 +69,7 @@ for ii=1:length(files)
 	shockTable=T(shock,:); % display the table index for the shock
 	% Optain the shock interval
 		shockEvent=T.eventTime(shock,:);
-		shockInter=shockEvent(1:8)-shockEvent(2:9);
+		shockInter=shockEvent(1:length(shockEvent)-1)-shockEvent(2:length(shockEvent));
 		shockDetection=-duration(00,0,80,0);
 		idxMissingShock=find(shockInter<=shockDetection);
 		
@@ -86,7 +92,7 @@ for ii=1:length(files)
 			'VariableNames',{'eventTime'});
 			shockTable.timeFromStart = shockTable.eventTime-T.eventTime(1);
 			shockTable.Manual=zeros(length(shockTable.timeFromStart),1);
-			shockTable.Manual(find(shockTable.eventTime == manualShockAll),:)=1;
+			shockTable.Manual(ismember(shockTable.eventTime, manualShockAll),:)=1;
 
 			writetable(shockTable,[animalID '_shock.txt'],'Delimiter',',') % save the clean up version of the file
 
@@ -128,6 +134,9 @@ for ii=1:length(files)
 		tupper=shockTable.eventTime(postWin)+postShockDur;
 		
 		WinTable=newT(isbetween(newT.eventTime,tlower,tupper),:);
+		if isempty(WinTable)
+			continue
+		end
 		distanceWin=WinTable.distance(end)-WinTable.distance(1);
 		matrix=[postWin sum(WinTable.speed) mean(WinTable.speed) distanceWin(1) postShockWindow str2num(animalID)];
 		finalMatrix=[finalMatrix;matrix];
@@ -223,9 +232,9 @@ for ii=1:length(files)
 
 % SAVE
 	% save the figure
-	saveas(figure1, [pathDir,outputFolder,filesep,animalID,' ' outputFolder,'.png']);
+	saveas(figure1, [pathDir,filesep,outputFolder,filesep,animalID,'.png']);
 	close all
 	% save the files
-	writetable(shockWinTable,[pathDir,outputFolder,filesep,animalID ' ' outputFolder,'.txt'],'Delimiter',',') % save the shockTable
+	writetable(shockWinTable,[pathDir,filesep,outputFolder,filesep,animalID, '.txt'],'Delimiter',',') % save the shockTable
 
 end
