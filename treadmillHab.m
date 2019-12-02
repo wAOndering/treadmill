@@ -111,6 +111,7 @@ for ii=1:length(files)
 	writetable(newT,[animalID '_clean.txt'],'Delimiter',',');% save the clean up version of the file
 	% to create a combined table that can be called in python using seaborn for graphing
 	newT.sID(:,1)=str2num(sIDtmp{1});
+	newT.habDay(:,1)=str2num(sIDtmp{2});
 
 	newT.timeFromStart=duration(newT.timeFromStart, 'Format', 'hh:mm'); %revert the format for ploting
 
