@@ -5,8 +5,10 @@ require(here)
 # dir<-setwd('C:/Users/Windows/Desktop/test_tread/expinfo')
 # files<-list.files(pattern='.csv')
 pathFile<-here()
+pathFile<-'C:/Users/Windows/Desktop/SyngapKO 9-19-19 shock/SyngapKO 9-19-19 shock teraterm'
 data<-fread(paste(pathFile,'/expinfo/summary.csv', sep=''))# data
 data<-data[,!1]
+
 
 # not necessary the best way to modify
 fit<-aov(fwdRun ~ habDay*Genotype + Error(sID/(habDay)), data)
@@ -27,7 +29,7 @@ give.n <- function(x){
 # str(dd)
 data<-melt(data, id=c('sID','habDay','Genotype'))
 data$habDay<-as.factor(data$habDay)
-data$Genotype<-factor(data$Genotype, levels = c('WT','HET'))
+data$Genotype<-factor(data$Genotype, levels = c('wt','het'))
 data$variable<-factor(data$variable, levels = c('fwdRun','bckRun'))
 
 # quartz(,1.853211, 2.935780)

@@ -7,7 +7,8 @@ function importTMdata = importfile(pathDir, timeWindow)
 % default for the function
 % if nargin<=2
 % 	%pathDir= '/home/rum/Dropbox (Scripps Research)/RumScripts/Scipts for other/Sheldon_TreadmillScript/';
-% 	timeWindow=60; % time window in minutes
+pathDir='C:\Users\Windows\Desktop\SyngapKO 9-19-19 shock\SyngapKO 9-19-19 shock teraterm'
+timeWindow=20; % time window in minutes
 % end
 
 cd(pathDir);
@@ -16,9 +17,29 @@ cd(pathDir);
 
 % import the data for the genotype
 genoT=readtable('expinfo/sIDgeno.csv')
+files = dir('*hab.csv');
 figure1=figure('position', [619 603 506 341])
+
+%%% LOOP to set up the figure
+sIDall=[]
+for jj=1:length(files)
+ 	% display(files(jj).name)
+% end
+	sIDtmp=files(jj).name;
+	sIDtmp=sIDtmp(1:end-4);
+	sIDtmp=split(sIDtmp,'d');
+	dtmp=split(sIDtmp{2},'s');
+	sIDtmp{2}=dtmp{1};
+	sIDall=[sIDall; sIDtmp{2}]
+end
+
+sIDall=str2num(sIDall)
+sIDall=max(sIDall)
+
+
+%%% LOOP to extract all the data
 mainMat=[];
-files = dir('*.csv');
+detailTab=[];
 for ii=1:length(files)
 % OPEN FILE	
 	display(files(ii).name);
@@ -26,6 +47,9 @@ for ii=1:length(files)
 	sIDtmp=files(ii).name;
 	sIDtmp=sIDtmp(1:end-4);
 	sIDtmp=split(sIDtmp,'d');
+	dtmp=split(sIDtmp{2},'s');
+	sIDtmp{2}=dtmp{1};
+	pltID=str2num(sIDtmp{2});
 
 	animalID=files(ii).name(1:end-4);
 	T=importfile(files(ii).name);
@@ -37,21 +61,31 @@ for ii=1:length(files)
 
 
 		% identify true start and end of the file
-		% startF=find(T.motionCat == "motion "); % identify the start of the file
+	endF=find(T.motionCat == "motion "); % identify the start of the file
 
 		% in the file NaT not a date correspond to the begin and the end fo the trial
 		% this is because the cell motion is followed by NaT row
 		% and becasue the date is combien with 'DONE!! '
 
-	endF=ismissing(T.eventTime); % identify the start and end of the value of interest see description above
-	endF=find(endF==1); % obtain the row index for those values
+
+	if isempty(endF)
+		endF=ismissing(T.eventTime); % identify the start and end of the value of interest see description above
+		endF=find(endF==1); % obtain the row index for those values
+		if isempty(endF)
+			T=T(1:end,:);
+		else
+			T=T(endF(1)-1:end,:);
+		end
+	else
+		T=T(endF:end,:);
+	end
 
 	% the following is structured this way to have the thing starting when motionCat is motion
-	if length(endF)==2
-	T=T(endF(1)-1:end,:); % subset the table to the row of interest
-	else
-	T=T(endF(2)-1:end,:);	
-	end
+			% if length(endF)<=2
+			% T=T(endF(1)-1:end,:); % subset the table to the row of interest
+			% else
+			% T=T(endF(2)-1:end,:);	
+			% end
 
 	T.distance(1)=0;
 	T.speed(1)=0;
@@ -75,13 +109,26 @@ for ii=1:length(files)
 	newT{newT.motionCat == "B  ", 'distanceCat'}=cumsum(newT(find(newT.motionCat == "B  "),:).distStep);
 	% save the write table
 	writetable(newT,[animalID '_clean.txt'],'Delimiter',',');% save the clean up version of the file
+	% to create a combined table that can be called in python using seaborn for graphing
+	newT.sID(:,1)=str2num(sIDtmp{1});
+
 	newT.timeFromStart=duration(newT.timeFromStart, 'Format', 'hh:mm'); %revert the format for ploting
+
+
 
 	% convert the time from start in seconds and subset the data to 1200 seconds
 	newT.timeFromStart=seconds(newT.timeFromStart);
 	if newT.timeFromStart(end)>timeWindow*60
 		newT=newT(find(newT.timeFromStart <= timeWindow*60),:);
 	end
+
+	% make a table that contains all the data
+	detailTab=[detailTab;newT];
+	size(detailTab)
+
+	%%% TO DO %%%%
+	% insert a condition if the samples do not match the data then
+	% ignor 
 
 	% extract the key values from the file
 	distB=sum(newT.distStep(find(newT.motionCat == "B  ")));
@@ -91,43 +138,42 @@ for ii=1:length(files)
 	mainMat=[mainMat;tmpMat];
 
 	% output some plot
-
-
-		subplot(211)
-			if genoTmp == "WT"
+		subplot(2,max(sIDall),pltID)
+			if genoTmp == "wt"
 			plot(newT.timeFromStart(find(newT.motionCat == "F  ")), newT.distanceCat(find(newT.motionCat == "F  ")), 'b')
 			hold on
 			else
 			plot(newT.timeFromStart(find(newT.motionCat == "F  ")), newT.distanceCat(find(newT.motionCat == "F  ")), 'r')
+			hold on
 			end	
 			ylabel(['Distance (mm)'])
 			xlabel(['time (s)'])
 			title(['Day ', sIDtmp{2}, ' forward run ', num2str(timeWindow), 'min'])
-
-
-
-		subplot(212)
-			if genoTmp == "WT"
+		subplot(2,max(sIDall),pltID+max(sIDall))
+			if genoTmp == "wt"
 			plot(newT.timeFromStart(find(newT.motionCat == "B  ")), newT.distanceCat(find(newT.motionCat == "B  ")), 'b')
 			hold on
 			else
 			plot(newT.timeFromStart(find(newT.motionCat == "B  ")), newT.distanceCat(find(newT.motionCat == "B  ")), 'r')
+			hold on
 			end	
 			ylabel(['Distance (mm)'])
 			xlabel(['time (s)'])
 			title(['Day ', sIDtmp{2}, ' backward run ', num2str(timeWindow), 'min'])
-
-
 end 
 
 %% combine with the genotype
 saveas(figure1, ['expinfo',filesep,'overview.png']);
 
 mainMat=array2table(mainMat,...
-'VariableNames',{'timeinSeconds','bckRun','fwdRun','sID','habDay'})
-mainMat=join(mainMat, genoT, 'key', 'sID')
+'VariableNames',{'timeinSeconds','bckRun','fwdRun','sID','habDay'});
+mainMat=join(mainMat, genoT, 'key', 'sID');
 
-writetable(mainMat,['expinfo',filesep,'summary.csv'],'Delimiter',',') % save the data
+
+detailTab=join(detailTab, genoT, 'key', 'sID');
+
+writetable(detailTab,['expinfo',filesep,'summaryDetails.csv'],'Delimiter',','); % save the data
+writetable(mainMat,['expinfo',filesep,'summary.csv'],'Delimiter',','); % save the data
 
 system("Rscript Rplot.r")
 
