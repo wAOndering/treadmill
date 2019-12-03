@@ -14,12 +14,17 @@ mkdir(outputFolder);
 
 
 
-files = dir('*.csv');
+files = dir('*shock.csv');
+mainOutput=[]
 for ii=1:length(files)
 % OPEN FILE	
 	display(files(ii).name);
 	animalID=files(ii).name(1:end-4);
+	animalID=split(animalID,'s');
+	animalID=str2num(animalID{1});
+
 	T=importfile(files(ii).name);
+
 
 	% information about the table
 		% T.Properties
@@ -33,17 +38,36 @@ for ii=1:length(files)
 	% this is because the cell motion is followed by NaT row
 	% and becasue the date is combien with 'DONE!! '
 
-	endF=ismissing(T.eventTime); % identify the start and end of the value of interest see description above
-	endF=find(endF==1); % obtain the row index for those values
+	% endF=ismissing(T.eventTime); % identify the start and end of the value of interest see description above
+	% endF=find(endF==1); % obtain the row index for those values
 
-	% the following is structured this way to have the thing starting when motionCat is motion
-	display(endF)
-	if endF(1)<10
-		T=T(endF(2)-1:end,:);
+	% % the following is structured this way to have the thing starting when motionCat is motion
+	% display(endF)
+	% if endF(1)<10
+	% 	T=T(endF(2)-1:end,:);
+	% else
+	% 	T=T(endF(1)-1:end,:); % subset the table to the row of interest
+	% end
+		% identify true start and end of the file
+
+	endF=find(T.motionCat == "motion "); % identify the start of the file
+
+		% in the file NaT not a date correspond to the begin and the end fo the trial
+		% this is because the cell motion is followed by NaT row
+		% and becasue the date is combien with 'DONE!! '
+
+
+	if isempty(endF)
+		endF=ismissing(T.eventTime); % identify the start and end of the value of interest see description above
+		endF=find(endF==1); % obtain the row index for those values
+		if isempty(endF)
+			T=T(1:end,:);
+		else
+			T=T(endF(1)-1:end,:);
+		end
 	else
-		T=T(endF(1)-1:end,:); % subset the table to the row of interest
+		T=T(endF:end,:);
 	end
-
 	T.distance(1)=0;
 	T.speed(1)=0;
 	T(2,:)=[];
@@ -60,7 +84,7 @@ for ii=1:length(files)
 	newT.timeFromStart=duration(newT.timeFromStart, 'Format', 'hh:mm:ss.SSSS'); % change the precision of the duration
 	% save the write table
 	writetable(newT,[animalID '_clean.txt'],'Delimiter',',') % save the clean up version of the file
-	newT.timeFromStart=duration(newT.timeFromStart, 'Format', 'hh:mm'); %revert the format for ploting
+	% newT.timeFromStart=duration(newT.timeFromStart, 'Format', 'hh:mm'); %revert the format for ploting
 
 
 % SHOCK related 
@@ -112,11 +136,11 @@ for ii=1:length(files)
 
 		% this is present as some iteration may not occur if the animal is not running
 		if sum(isbetween(newT.eventTime,tlower,tupper))==0
-			matrix=[preWin 0 0 0 -preShockWindow str2num(animalID)];
+			matrix=[preWin 0 0 0 -preShockWindow animalID];
 		else	
 			WinTable=newT(isbetween(newT.eventTime,tlower,tupper),:);
 			distanceWin=WinTable.distance(end)-WinTable.distance(1);
-			matrix=[preWin sum(WinTable.speed) mean(WinTable.speed) distanceWin(1) -preShockWindow str2num(animalID)];
+			matrix=[preWin sum(WinTable.speed) mean(WinTable.speed) distanceWin(1) -preShockWindow animalID];
 		end
 
 		finalMatrix=[finalMatrix;matrix];
@@ -138,7 +162,7 @@ for ii=1:length(files)
 			continue
 		end
 		distanceWin=WinTable.distance(end)-WinTable.distance(1);
-		matrix=[postWin sum(WinTable.speed) mean(WinTable.speed) distanceWin(1) postShockWindow str2num(animalID)];
+		matrix=[postWin sum(WinTable.speed) mean(WinTable.speed) distanceWin(1) postShockWindow animalID];
 		finalMatrix=[finalMatrix;matrix];
 	end
 	
@@ -147,8 +171,8 @@ for ii=1:length(files)
 
 	% concatenate the array
 	shockWinTable=[preWinTable;postWinTable];
+	mainOutput=[mainOutput;shockWinTable];
 	% save the table as  csv
-
 
 % PLOT 
 
@@ -183,7 +207,7 @@ for ii=1:length(files)
 		plot(newT.timeFromStart,newT.speed, 'b'); %timeFromStart / eventTime
 		hold on
 
-		title([animalID ' ' outputFolder]);
+		title([num2str(animalID) ' ' outputFolder]);
 		%xlabel('Time (min)') ;
 		ylabel('Speed');
 		set(gca,'TickDir','out');
@@ -232,9 +256,12 @@ for ii=1:length(files)
 
 % SAVE
 	% save the figure
-	saveas(figure1, [pathDir,filesep,outputFolder,filesep,animalID,'.png']);
+	saveas(figure1, [pathDir,filesep,outputFolder,filesep,num2str(animalID),'.png']);
 	close all
 	% save the files
-	writetable(shockWinTable,[pathDir,filesep,outputFolder,filesep,animalID, '.txt'],'Delimiter',',') % save the shockTable
+	writetable(shockWinTable,[pathDir,filesep,outputFolder,filesep,num2str(animalID), '.txt'],'Delimiter',',') % save the shockTable
 
 end
+
+	mainOutput=[mainOutput;shockWinTable];
+	writetable(mainOutput,[pathDir,filesep,'MainSummary_','pre' num2str(preShockWindow) '_post' num2str(postShockWindow),'.csv'],'Delimiter',','); % save the dat
