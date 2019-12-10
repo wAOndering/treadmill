@@ -82,6 +82,14 @@ for ii=1:length(files)
 	T(any(TF,2),:);% display all the line that have missing values
 	newT=T(~any(TF,2),:);% new table with no missing values
 	newT.timeFromStart=duration(newT.timeFromStart, 'Format', 'hh:mm:ss.SSSS'); % change the precision of the duration
+	newT.distance=newT.distance-newT.distance(1); % calculate the distance from the actual true beginning of the the trial
+	newT.distStep=[nan; diff(newT.distance)];
+
+	newT.distStep(isnan(newT.distStep))=0;
+	newT{newT.motionCat == "F  ", 'distanceCat'}=cumsum(newT(find(newT.motionCat == "F  "),:).distStep);
+	newT{newT.motionCat == "B  ", 'distanceCat'}=cumsum(newT(find(newT.motionCat == "B  "),:).distStep);
+	
+
 	% save the write table
 	writetable(newT,[animalID '_clean.txt'],'Delimiter',',') % save the clean up version of the file
 	% newT.timeFromStart=duration(newT.timeFromStart, 'Format', 'hh:mm'); %revert the format for ploting
@@ -139,6 +147,8 @@ for ii=1:length(files)
 			matrix=[preWin 0 0 0 -preShockWindow animalID];
 		else	
 			WinTable=newT(isbetween(newT.eventTime,tlower,tupper),:);
+
+			
 			distanceWin=WinTable.distance(end)-WinTable.distance(1);
 			matrix=[preWin sum(WinTable.speed) mean(WinTable.speed) distanceWin(1) -preShockWindow animalID];
 		end
