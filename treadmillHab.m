@@ -3,13 +3,17 @@
 
 % select the files interested in
 function importTMdata = importfile(pathDir, timeWindow, preShock)
+addpath(genpath('C:/git/rumLab/treadmill'))
 
 % default for the function
 % if nargin<=2
 % 	%pathDir= '/home/rum/Dropbox (Scripps Research)/RumScripts/Scipts for other/Sheldon_TreadmillScript/';
-pathDir='C:\Users\Windows\Desktop\SyngapKO 9-19-19 shock\SyngapKO 9-19-19 shock teraterm'
+% pathDir='C:\Users\Windows\Desktop\SyngapKO 9-19-19 shock\SyngapKO 9-19-19 shock teraterm'
+
+pathDir='C:/Users/Windows/Desktop/SyngapKO 9-19-19 shock/test'
+
 preShock="yes";
-timeWindow=20; % time window in minutes
+timeWindow=2; % time window in minutes
 % end
 
 cd(pathDir);
@@ -19,10 +23,11 @@ cd(pathDir);
 % import the data for the genotype
 genoT=readtable('expinfo/sIDgeno.csv')
 if preShock=="yes"
-	timeWindow=4;
+	timeWindow=2;
 	files = dir('*shock.csv');
 else
-	files = dir('*hab.csv');
+	files = dir('*d4*hab.csv');
+	% files = dir('*test*.csv');
 end
 
 figure1=figure('position', [619 603 506 341])
@@ -31,7 +36,7 @@ figure1=figure('position', [619 603 506 341])
 
 
 if preShock=="no"
-sIDall=[]
+sIDall=[];
 	for jj=1:length(files)
 	 	% display(files(jj).name)
 	% end
@@ -63,9 +68,10 @@ for ii=1:length(files)
 if preShock=="no"
 	sIDtmp=files(ii).name;
 	sIDtmp=sIDtmp(1:end-4);
-	sIDtmp=split(sIDtmp,'d');
-	dtmp=split(sIDtmp{2},'s');
-	sIDtmp{2}=dtmp{1};
+	sIDtmp=split(sIDtmp,'s');
+	dtmp=split(sIDtmp{1},'d'); % this is different from hab{1} to test{end}
+	sIDtmp{1}=dtmp{1};
+	sIDtmp{2}=dtmp{end};
 	pltID=str2num(sIDtmp{2});
 else
 	sIDtmp=files(ii).name;
@@ -213,3 +219,6 @@ end
 
 system("Rscript Rplot.r")
 
+
+
+writetable(mainMat,['expinfo',filesep,'shock_2min_summary.csv'],'Delimiter',','); % save the data
